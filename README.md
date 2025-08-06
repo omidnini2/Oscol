@@ -58,6 +58,51 @@ $ docker compose up --build
   ```
 - **سوئیچ خودکار**: می‌توانید دیکشنری `language -> model_name` تعریف و بر اساس خروجی `langdetect` انتخاب کنید.
 
+### 5.1 آموزش مدل فارسی اختصاصی (اختیاری)
+
+1. دادهٔ صوتی فارسی جمع‌آوری کنید (حداقل ۱ ساعت؛ هرچقدر بیشتر بهتر). منابع پیشنهادی:
+   - Mozilla Common Voice (fa)
+   - وبلاگ‌های صوتی یا پادکست‌های آزاد
+2. برای هر جمله، فایل wav + متن درست کنید (`metadata.csv` به‌صورت `wav|متن`)
+3. کتابخانهٔ 🤗TTS دارای اسکریپت fine-tune است:
+   ```bash
+   pip install TTS==0.22.0
+   TTS/bin/train_tts.py --continue_path tts_models/fa/custom/vits \
+        --config_path TTS/configs/fine_tune/vits_finetune_fa.json \
+        --output_path ./finetuned_fa
+   ```
+4. پس از اتمام، فولدر `./finetuned_fa` را به `/tts-backend/models/fa_custom` کپی و در `MODEL_MAP["fa"]` مسیر جدید را قرار دهید.
+
+### 5.2 اتصال به API هوش مصنوعی iGap
+
+اگر در iGap حساب توسعه‌دهنده دارید و کلید API دریافت کرده‌اید، می‌توانید از هوش مصنوعی فارسی آن به‌عنوان fallback استفاده کنید. نمونهٔ ساده:
+
+```python
+import requests, base64
+
+def igap_tts(text):
+    resp = requests.post(
+        "https://api.igap.ai/tts",  # آدرس فرضی
+        json={"text": text, "lang": "fa"},
+        headers={"Authorization": f"Bearer {os.getenv('IGAP_TOKEN')}"}
+    )
+    resp.raise_for_status()
+    audio_b64 = resp.json()["audio"]
+    return base64.b64decode(audio_b64)
+```
+
+در `app.py` می‌توانید قبل از `engine = get_engine_for(lang)` این شرط را اضافه کنید:
+
+```python
+if lang == "fa" and os.getenv("IGAP_TOKEN"):
+    audio_data = igap_tts(text)
+    with open(output_wav, "wb") as f:
+        f.write(audio_data)
+    return send_file(output_wav, mimetype="audio/wav", ...)
+```
+
+> توجه: مسیر و مستندات رسمی API iGap را بررسی کنید؛ آدرس بالا فرضی است.
+
 ## 6. امنیت و شبکهٔ‌ خصوصی
 - اگر فقط LAN: پورت‌ها را روی روتر محدود کنید.
 - احراز هویت پایه در Apache:

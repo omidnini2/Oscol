@@ -8,9 +8,22 @@ from TTS.api import TTS
 app = Flask(__name__)
 CORS(app)
 
-# Load multilingual TTS model (XTTS) once at startup
-MODEL_NAME = "tts_models/multilingual/multi-dataset/xtts_v1"
-tts_engine = TTS(MODEL_NAME, gpu=False)
+# Map language code -> TTS model name
+MODEL_MAP = {
+    "default": "tts_models/multilingual/multi-dataset/xtts_v1",
+    "fa": "tts_models/fa/custom/vits"  # فارسی (کیفیت بهتر)
+}
+
+# Cache loaded engines to avoid re-loading per request
+tts_engines = {}
+
+
+def get_engine_for(lang: str):
+    """Return (and lazily load) an engine for a language code."""
+    model_name = MODEL_MAP.get(lang, MODEL_MAP["default"])
+    if model_name not in tts_engines:
+        tts_engines[model_name] = TTS(model_name, gpu=False)
+    return tts_engines[model_name]
 
 EMBED_DIR = "data/embeddings"
 os.makedirs(EMBED_DIR, exist_ok=True)
@@ -44,7 +57,14 @@ def synthesize():
         return jsonify({"error": "embedding not found"}), 404
 
     output_wav = os.path.join("data", f"{uuid.uuid4()}.wav")
-    tts_engine.tts_to_file(text=text, speaker_wav=speaker_wav, language=lang, file_path=output_wav)
+
+    engine = get_engine_for(lang)
+
+    # If we are using the Persian VITS model, its signature differs (no language param)
+    if MODEL_MAP.get(lang) == MODEL_MAP["fa"]:
+        engine.tts_to_file(text=text, speaker_wav=speaker_wav, file_path=output_wav)
+    else:
+        engine.tts_to_file(text=text, speaker_wav=speaker_wav, language=lang, file_path=output_wav)
 
     return send_file(output_wav, mimetype="audio/wav", as_attachment=True, download_name="output.wav")
 
