@@ -4,6 +4,7 @@ from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from langdetect import detect
 from TTS.api import TTS
+from faster_whisper import WhisperModel
 
 app = Flask(__name__)
 CORS(app)
@@ -27,6 +28,48 @@ def get_engine_for(lang: str):
 
 EMBED_DIR = "data/embeddings"
 os.makedirs(EMBED_DIR, exist_ok=True)
+
+# Load whisper model lazily (base size)
+whisper_model = None
+
+
+def transcribe_audio(path: str):
+    global whisper_model
+    if whisper_model is None:
+        whisper_model = WhisperModel("base", device="cpu", compute_type="int8")
+    segments, _ = whisper_model.transcribe(path, language="fa", beam_size=5)
+    text_out = " ".join([seg.text.strip() for seg in segments])
+    return text_out
+
+# ------------------------------
+# Automatic transcription + dataset add
+# ------------------------------
+
+@app.route("/transcribe", methods=["POST"])
+def transcribe_and_store():
+    """Receive audio, transcribe, and save (audio,text) into dataset/fa."""
+    audio_file = request.files.get("audio")
+    if not audio_file:
+        return jsonify({"error": "audio required"}), 400
+
+    tmp_path = os.path.join("data", "tmp", f"{uuid.uuid4()}.wav")
+    os.makedirs(os.path.dirname(tmp_path), exist_ok=True)
+    audio_file.save(tmp_path)
+
+    transcript = transcribe_audio(tmp_path)
+
+    # store in dataset
+    ds_dir = os.path.join("data", "dataset", "fa")
+    os.makedirs(ds_dir, exist_ok=True)
+    new_id = str(uuid.uuid4())
+    wav_path = os.path.join(ds_dir, f"{new_id}.wav")
+    os.replace(tmp_path, wav_path)
+
+    meta_path = os.path.join(ds_dir, "metadata.csv")
+    with open(meta_path, "a", encoding="utf-8") as m:
+        m.write(f"{new_id}.wav|{transcript}\n")
+
+    return jsonify({"transcript": transcript, "id": new_id})
 
 @app.route("/clone", methods=["POST"])
 def clone_voice():

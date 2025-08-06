@@ -19,7 +19,8 @@
     <section>
       <p>برای بهبود کیفیت خواندن فارسی، یک فایل صوتی (حداقل ۳ ثانیه) و متن همان جمله را بارگذاری کنید.</p>
       <input type="file" id="audio-sample" accept="audio/*" />
-      <textarea id="sample-text" rows="3" placeholder="متن فارسی مربوط به فایل صوتی را اینجا بنویسید"></textarea>
+      <button id="record-btn">🎤 ضبط صدا</button>
+      <textarea id="sample-text" rows="3" placeholder="...متن شناسایی‌شده اینجا ظاهر می‌شود" readonly></textarea>
       <button id="upload-btn">آپلود نمونه</button>
       <p id="upload-status"></p>
     </section>
