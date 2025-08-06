@@ -1,0 +1,54 @@
+:root[data-theme="light"] {
+  --bg: #ffffff;
+  --fg: #212121;
+  --accent: #0066cc;
+}
+
+:root[data-theme="dark"] {
+  --bg: #121212;
+  --fg: #e0e0e0;
+  --accent: #66b2ff;
+}
+
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid var(--accent);
+}
+
+main {
+  flex: 1;
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+section {
+  margin-bottom: 2rem;
+}
+
+button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  margin-top: 0.5rem;
+  cursor: pointer;
+}
+
+textarea {
+  width: 100%;
+  padding: 0.5rem;
+}

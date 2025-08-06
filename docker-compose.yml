@@ -1,0 +1,25 @@
+version: '3.9'
+services:
+  web:
+    image: php:8.2-apache
+    container_name: php-voice-web
+    volumes:
+      - ./website:/var/www/html
+    ports:
+      - "8080:80"
+    networks:
+      - voicenet
+  tts:
+    build: ./tts-backend
+    container_name: python-tts
+    volumes:
+      - tts-cache:/root/.local/share/tts
+      - ./tts-backend/data:/app/data
+    ports:
+      - "5000:5000"
+    networks:
+      - voicenet
+networks:
+  voicenet:
+volumes:
+  tts-cache:
