@@ -68,5 +68,32 @@ def synthesize():
 
     return send_file(output_wav, mimetype="audio/wav", as_attachment=True, download_name="output.wav")
 
+# ------------------------------
+# Collect dataset samples (audio + transcript) for future fine-tuning
+# ------------------------------
+
+@app.route("/dataset", methods=["POST"])
+def add_dataset():
+    """Save (audio,text) pair to dataset/fa for later fine-tuning."""
+    audio_file = request.files.get("audio")
+    text = request.form.get("text") or (request.json and request.json.get("text"))
+    lang = request.form.get("lang") or (request.json and request.json.get("lang")) or "fa"
+
+    if not audio_file or not text:
+        return jsonify({"error": "audio and text required"}), 400
+
+    ds_dir = os.path.join("data", "dataset", lang)
+    os.makedirs(ds_dir, exist_ok=True)
+
+    file_id = str(uuid.uuid4())
+    wav_path = os.path.join(ds_dir, f"{file_id}.wav")
+    audio_file.save(wav_path)
+
+    meta_path = os.path.join(ds_dir, "metadata.csv")
+    with open(meta_path, "a", encoding="utf-8") as m:
+        m.write(f"{file_id}.wav|{text}\n")
+
+    return jsonify({"status": "saved", "id": file_id})
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
